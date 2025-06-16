@@ -2,40 +2,23 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-console.log('Stripe key exists:', !!process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 
 // Middleware
 app.use(cors({
-  origin: '*', // Allow requests from any origin
+  origin: ['https://khbrah.sa', 'http://localhost:3000'],
   methods: ['GET', 'POST'],
   credentials: true
 }));
 app.use(express.json());
 app.use(express.static('public'));
 
-// Health check endpoint for Render
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok' });
-});
-
 // Routes
 app.post('/create-checkout-session', async (req, res) => {
   const { serviceType, amount, currency } = req.body;
 
   try {
-    // Validate required fields
-    if (!serviceType || !amount) {
-      return res.status(400).json({ error: 'Missing required fields: serviceType and amount are required' });
-    }
-
-    // Validate amount is a positive number
-    const numericAmount = Number(amount);
-    if (isNaN(numericAmount) || numericAmount <= 0) {
-      return res.status(400).json({ error: 'Invalid amount: must be a positive number' });
-    }
-
     // Create a product name based on service type
     let productName;
     switch (serviceType) {
@@ -52,9 +35,6 @@ app.post('/create-checkout-session', async (req, res) => {
         productName = 'Legal Service';
     }
 
-    // Convert amount to cents for Stripe
-    const amountInCents = Math.round(numericAmount * 100);
-
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [{
@@ -64,7 +44,7 @@ app.post('/create-checkout-session', async (req, res) => {
             name: productName,
             description: `Khbrah Law Firm - ${productName}`,
           },
-          unit_amount: amountInCents,
+          unit_amount: amount * 100, // Stripe uses cents
         },
         quantity: 1,
       }],
@@ -93,7 +73,7 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (req, res)
     event = stripe.webhooks.constructEvent(
       req.body,
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET // Use environment variable for webhook secret
+      process.env.STRIPE_WEBHOOK_SECRET
     );
   } catch (err) {
     console.error('Webhook Error:', err.message);
