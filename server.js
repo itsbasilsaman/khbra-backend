@@ -7,9 +7,10 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: ['https://khbrah.sa', 'http://localhost:3000'],
-  methods: ['GET', 'POST'],
-  credentials: true
+  origin: ['https://www.khbrah.sa', 'https://khbrah.sa', 'http://localhost:3000', 'http://127.0.0.1:5500'],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 app.use(express.static('public'));
